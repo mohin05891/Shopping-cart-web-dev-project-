@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SHOPPING CENTRE</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 p-6 min-h-screen text-slate-800">
+
+    <div class="max-w-5xl mx-auto space-y-6">
+        <header class="text-center pb-4 border-b">
+            <h1 class="text-3xl font-extrabold tracking-tight text-slate-900">SHOPPING CENTRE</h1>
+            <p class="text-sm text-slate-500 mt-1">Most user friendly app</p>
+        </header>
+
+        <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between max-w-xl mx-auto">
+            <div>
+                <h2 class="text-lg font-bold text-emerald-600 mb-1">Backend Security Token Engine</h2>
+                <div class="flex items-center gap-3 my-2">
+                    <button onclick="fetchMathQuestion()" class="bg-emerald-500 hover:bg-emerald-600 text-white text-xs px-3 py-1.5 rounded transition font-medium">
+                        Generate Question
+                    </button>
+                    <span id="questionDisplay" class="font-mono text-sm font-bold text-slate-600">Click to fetch...</span>
+                </div>
+                <div class="flex gap-2 mt-3">
+                    <input id="answerInput" type="number" placeholder="Answer" class="border p-1.5 text-sm rounded w-28">
+                    <button onclick="submitVerifyAnswer()" class="bg-slate-800 hover:bg-slate-900 text-white text-xs px-4 py-2 rounded font-medium transition">
+                        Verify & Issue Token
+                    </button>
+                </div>
+            </div>
+            <div class="mt-4 pt-2 border-t text-xs flex justify-between items-center text-slate-500">
+                <span>Active Security Token:</span>
+                <span id="tokenDisplay" class="font-mono text-red-600 font-bold bg-red-50 px-2 py-0.5 rounded border border-red-200">None</span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="md:col-span-2 bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-slate-900">Products List (Served from Backend Array)</h2>
+                    <select id="sortEngine" onchange="loadProducts()" class="border p-1.5 text-sm rounded bg-slate-50 font-medium">
+                        <option value="">Default Sequence</option>
+                        <option value="price-asc">Price: Low to High</option>
+                        <option value="price-desc">Price: High to Low</option>
+                    </select>
+                </div>
+                <div id="productShowcase" class="space-y-3"></div>
+            </div>
+
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between">
+                <div>
+                    <h2 class="text-xl font-bold text-amber-600 mb-4">Shopping Basket</h2>
+                    <div id="basketShowcase" class="min-h-[100px]"></div>
+                </div>
+                <div class="pt-4 border-t">
+                    <button onclick="triggerPurchase()" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 rounded transition shadow-sm text-sm">
+                        Confirm Purchase Verification
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const BASE_URL = 'http://localhost:3000/api';
+        let currentBasketItem = null; 
+        let activeToken = '';
+
+        // 1. Fetch products & Handle sorting visualization
+        async function loadProducts() {
+            const sortingParam = document.getElementById('sortEngine').value;
+            const response = await fetch(`${BASE_URL}/products?sortBy=${sortingParam}`);
+            const productsList = await response.json();
+            
+            const listContainer = document.getElementById('productShowcase');
+            listContainer.innerHTML = '';
+
+            productsList.forEach(item => {
+                const isOutOfStock = item.stock <= 0;
+                listContainer.innerHTML += `
+                    <div class="flex justify-between items-center p-3 border rounded-lg bg-slate-50 hover:bg-slate-100 transition">
+                        <div>
+                            <p class="font-bold text-slate-900">${item.name} <span class="text-xs font-normal text-slate-400">(ID: ${item.id})</span></p>
+                            <p class="text-xs text-slate-600 mt-0.5">Price: <span class="font-semibold text-slate-800">$${item.price}</span> | Available Stock: <span class="font-bold text-indigo-600">${item.stock}</span></p>
+                        </div>
+                        <button onclick="stageInBasket('${item.id}', '${item.name}', ${item.price})" 
+                                class="text-xs font-semibold py-1.5 px-3 rounded shadow-sm transition ${isOutOfStock ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}"
+                                ${isOutOfStock ? 'disabled' : ''}>
+                            ${isOutOfStock ? 'Sold Out' : 'Add to Basket'}
+                        </button>
+                    </div>
+                `;
+            });
+        }
+
+        // 2. Stage product into basket array structure
+        function stageInBasket(id, name, price) {
+            currentBasketItem = { id, name, price };
+            syncBasketUI();
+        }
+
+        function syncBasketUI() {
+            const display = document.getElementById('basketShowcase');
+            if (!currentBasketItem) {
+                display.innerHTML = `<p class="text-slate-400 text-xs italic">Your basket is currently empty.</p>`;
+                return;
+            }
+            display.innerHTML = `
+                <div class="p-3 bg-amber-50 border border-amber-200 rounded-lg flex justify-between items-center">
+                    <div>
+                        <p class="font-bold text-sm text-slate-800">${currentBasketItem.name}</p>
+                        <p class="text-xs text-slate-500">$${currentBasketItem.price}</p>
+                    </div>
+                    <button onclick="currentBasketItem=null; syncBasketUI();" class="text-red-500 hover:text-red-700 text-xs font-bold transition">Remove</button>
+                </div>
+            `;
+        }
+
+        // 3. Math Question Retrieval Routing
+        async function fetchMathQuestion() {
+            const response = await fetch(`${BASE_URL}/math-question`);
+            const payload = await response.json();
+            document.getElementById('questionDisplay').innerText = payload.question;
+        }
+
+        // 4. Token submission processing 
+        async function submitVerifyAnswer() {
+            const val = document.getElementById('answerInput').value;
+            try {
+                const response = await fetch(`${BASE_URL}/verify`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userAnswer: val })
+                });
+                const payload = await response.json();
+
+                if (payload.success) {
+                    activeToken = payload.token;
+                    document.getElementById('tokenDisplay').innerText = activeToken;
+                    document.getElementById('answerInput').value = '';
+                    alert('Token successfully generated and stored on client!');
+                }
+            } catch (err) {
+                alert('Verification failed: Wrong answer provided to backend database query.');
+            }
+        }
+
+        // 5. Final Checkout Trigger
+        async function triggerPurchase() {
+            if (!currentBasketItem) return alert("Validation error: Select a product to add to your basket first.");
+            if (!activeToken) return alert("Security error: Missing authorization token. Solve math problem.");
+
+            const response = await fetch(`${BASE_URL}/buy`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ productId: currentBasketItem.id, token: activeToken })
+            });
+            const data = await response.json();
+
+            alert(data.message);
+            
+            if (response.ok) {
+                currentBasketItem = null;
+                activeToken = ''; 
+                document.getElementById('tokenDisplay').innerText = 'None';
+                syncBasketUI();
+                loadProducts();
+            }
+        }
+
+        // Run on initial mounting
+        loadProducts();
+        syncBasketUI();
+    </script>
+</body>
+</html>
