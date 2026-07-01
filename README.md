@@ -1,5 +1,5 @@
 # Shopping-cart-Web-dev-project-
-this is a simple demonstration of a web development project which uses ram.
+this is a simple demonstration of a web development project which uses random access memory.
 # Shopping Centre - Backend Security Token Engine
 
 A lightweight, full-stack E-commerce application featuring dynamic product listing, server-side sorting, a shopping basket simulation, and a math-challenge-based backend token security engine[cite: 2, 3, 6].
